@@ -1,63 +1,63 @@
-<script>
-  let email = '';
-  let password = '';
-  let confirmPassword = '';
 
-  function handleRegister() {
-    if (password !== confirmPassword) {
-      alert('Passwords do not match!');
-      return;
+<script>
+  import { createEventDispatcher } from 'svelte';
+  let username = '';
+  let password = '';
+  let errorMessage = '';
+
+  const dispatch = createEventDispatcher();
+
+  async function handleRegister() {
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (response.ok) {
+        dispatch('registerSuccess');
+      } else {
+        const data = await response.json();
+        errorMessage = data.message;
+      }
+    } catch (error) {
+      console.error(error);
+      errorMessage = 'An error occurred during registration.';
     }
-    console.log('Registering with:', email, password);
   }
 </script>
 
-<div class="form-container">
-  <h2>Register</h2>
-  <input type="email" bind:value={email} placeholder="Email" required />
-  <input type="password" bind:value={password} placeholder="Password" required />
-  <input type="password" bind:value={confirmPassword} placeholder="Confirm Password" required />
-  <button on:click={handleRegister}>Register</button>
-  <p>Already have an account? <a href="/login">Login</a></p>
-</div>
-
 <style>
-  .form-container {
-    max-width: 300px;
-    margin: auto;
+  /* Basic styling */
+  form {
     display: flex;
     flex-direction: column;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-  }
-  h2 {
-    text-align: center;
-    margin-bottom: 20px;
+    width: 300px;
+    margin: auto;
   }
   input {
-    margin-bottom: 10px;
+    margin: 10px 0;
     padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
     font-size: 16px;
   }
   button {
-    background-color: #007bff;
+    padding: 10px;
+    font-size: 16px;
+    background-color: #4CAF50;
     color: white;
     border: none;
-    border-radius: 4px;
-    padding: 10px;
     cursor: pointer;
-    font-size: 16px;
-  }
-  button:hover {
-    background-color: #0056b3;
   }
   p {
-    text-align: center;
-    margin-top: 10px;
+    color: red;
   }
 </style>
+
+<h2>Register</h2>
+<form on:submit|preventDefault={handleRegister}>
+  <input type="email" bind:value={username} placeholder="Email" required />
+  <input type="password" bind:value={password} placeholder="Password" required />
+  <button type="submit">Register</button>
+  {#if errorMessage}<p>{errorMessage}</p>{/if}
+</form>

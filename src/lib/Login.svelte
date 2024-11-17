@@ -1,57 +1,57 @@
+<!-- src/lib/login.svelte -->
 <script>
-  let email = '';
+  import { createEventDispatcher } from 'svelte';
+  let username = '';
   let password = '';
+  let errorMessage = '';
+  const dispatch = createEventDispatcher();
 
-  function handleLogin() {
-    console.log('Logging in with:', email, password);
+  async function handleLogin() {
+      const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+      });
+
+      if (response.ok) {
+          dispatch('loginSuccess');
+      } else {
+          const data = await response.json();
+          errorMessage = data.message;
+      }
   }
 </script>
 
-<div class="form-container">
-  <h2>Login</h2>
-  <input type="email" bind:value={email} placeholder="Email" required />
-  <input type="password" bind:value={password} placeholder="Password" required />
-  <button on:click={handleLogin}>Login</button>
-  <p>Don't have an account? <a href="/register">Register</a></p>
-</div>
-
 <style>
-  .form-container {
-    max-width: 300px;
-    margin: auto;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-  }
-  h2 {
-    text-align: center;
-    margin-bottom: 20px;
+  /* Basic styling */
+  form {
+      display: flex;
+      flex-direction: column;
+      width: 300px;
+      margin: auto;
   }
   input {
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 16px;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
   }
   button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
- padding: 10px;
-    cursor: pointer;
-    font-size: 16px;
-  }
-  button:hover {
-    background-color: #0056b3;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
   }
   p {
-    text-align: center;
-    margin-top: 10px;
+      color: red;
   }
 </style>
+
+<h2>Login</h2>
+<form on:submit|preventDefault={handleLogin}>
+  <input type="text" bind:value={username} placeholder="Email" required />
+  <input type="password" bind:value={password} placeholder="Password" required />
+  <button type="submit">Login</button>
+  {#if errorMessage}<p>{errorMessage}</p>{/if}
+</form>

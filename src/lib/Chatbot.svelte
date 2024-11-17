@@ -1,103 +1,122 @@
+<!-- src/lib/chatbot.svelte -->
 <script>
-  import axios from 'axios';
-
-  let userMessage = '';
+  import { onMount } from 'svelte';
+  import { supabase } from './supabase';
+  let user;
   let messages = [];
+  let inputMessage = '';
+  let loading = false;
 
+  // Function to fetch the user and check authentication
+  onMount(async () => {
+      const { data, error } = await supabase.auth.getUser ();
+      if (error || !data.user) {
+          window.location.href = '/login';
+      } else {
+          user = data.user;
+      }
+  });
+
+  // Function to send a message to Gemini AI
   async function sendMessage() {
-    if (userMessage.trim() === '') return;
+      if (!inputMessage.trim()) return;
 
-    messages.push({ text: userMessage, sender: 'user' });
-    const response = await fetchGemini Response(userMessage);
-    messages.push({ text: response, sender: 'bot' });
-    userMessage = '';
-  }
+      // Add user message to chat
+      messages.push({ text: inputMessage, sender: 'user' });
 
-  async function fetchGeminiResponse(message) {
-    try {
-      const res = await axios.post('https://api.gemini.com/v1/your_endpoint', {
-        message: message,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_GEMINI_API_KEY}`,
-        },
-      });
-      return res.data.response;
-    } catch (error) {
-      console.error('Error fetching response:', error);
-      return 'Sorry, something went wrong.';
-    }
+      // Clear input field
+      const messageToSend = inputMessage;
+      inputMessage = '';
+      loading = true;
+
+      try {
+          // Call Gemini AI API
+          const response = await fetch('https://api.gemini.ai/v1/chat', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer AIzaSyDmE1vZWMvalReOfjtirCbyO7QZJqu7v7s` // Replace with your actual API key
+              },
+              body: JSON.stringify({
+                  prompt: messageToSend,
+                  // Add any other parameters required by the API
+              })
+          });
+
+          const data = await response.json();
+
+          if (data && data.response) {
+              // Add Gemini AI response to chat
+              messages.push({ text: data.response, sender: 'gemini' });
+          } else {
+              messages.push({ text: 'Error: No response from AI', sender: 'gemini' });
+          }
+      } catch (error) {
+          console.error('Error communicating with Gemini AI:', error);
+          messages.push({ text: 'Error: Could not reach AI service', sender: 'gemini' });
+      } finally {
+          loading = false;
+      }
   }
 </script>
 
-<div class="chatbot">
-  <h2 class="chatbot-title">Chatbot</h2>
-  <div class="messages">
-    {#each messages as msg}
-      <div class={msg.sender}>
-        {msg.sender === 'user' ? 'You: ' : 'Bot: '}{msg.text}
-      </div>
-    {/each}
-  </div>
-  <div class="input-area">
-    <input type="text" bind:value={userMessage} placeholder="Type a message..." on:keydown="{(e) => e.key === 'Enter' && sendMessage()}" />
-    <button on:click={sendMessage}>Send</button>
-  </div>
-</div>
-
 <style>
-  .chatbot {
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 15px;
-    width: 350px;
-    max-height: 400px;
-    overflow-y: auto;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    background-color: #f9f9f9;
-    font-family: 'Arial', sans-serif;
+  /* Basic styling for the chatbot */
+  .chat-container {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      max-width: 600px;
+      margin: auto;
+      height: 400px;
+      overflow-y: auto;
   }
-  .chatbot-title {
-    font-size: 20px;
-    color: #007bff;
-    margin-bottom: 10px;
-  }
-  .messages {
-    margin-bottom: 10px;
-    max-height: 300px;
-    overflow-y: auto;
+  .message {
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 5px;
   }
   .user {
-    text-align: right;
-    color: #007bff;
-    font-weight: bold;
+      background-color: #d1e7dd;
+      text-align: right;
   }
-  .bot {
-    text-align: left;
-    color: #333;
+  .gemini {
+      background-color: #f8d7da;
+      text-align: left;
   }
-  .input-area {
-    display: flex;
-    justify-content: space-between;
+  .input-container {
+      display: flex;
+      margin-top: 10px;
   }
   input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    width: calc(100% - 22px);
-    margin-right: 10px;
-    font-size: 16px;
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
   }
   button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 10px;
-    cursor: pointer;
-    font-size: 16px;
-  }
-  button:hover {
-    background-color: #0056b3;
+      padding: 10px;
+      margin-left: 5px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
   }
 </style>
+
+<div class="chat-container">
+  {#each messages as message}
+      <div class="message {message.sender}">
+          {message.text}
+      </div>
+  {/each}
+  {#if loading}
+      <div class="message gemini">Gemini is typing...</div>
+  {/if}
+</div>
+
+<div class="input-container">
+  <input type="text" bind:value={inputMessage} placeholder="Type your message..." on:keydown="{(e) => e.key === 'Enter' && sendMessage()}" />
+  <button on:click="{sendMessage}">Send</button>
+</div>
